@@ -7,6 +7,7 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -27,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
   public static String TAG = "AudioProcessingDemo";
 
+  TextView volumeTextView;
   MicRecorder micRecorder;
   MediaPlayer mediaPlayer;
   AudioDispatcher dispatcher;
@@ -35,40 +37,19 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    //pitchTextView = (TextView) findViewById(R.id.pitchTextView);
-
+    volumeTextView = (TextView) findViewById(R.id.volumeTextView);
     RawFileManager.instance.convertRawFiles(getApplicationContext());
-    /*
-    AudioDispatcher dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0);
-    dispatcher.addAudioProcessor(new PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 22050, 1024, new PitchDetectionHandler() {
-      @Override
-      public void handlePitch(PitchDetectionResult pitchDetectionResult,
-                              AudioEvent audioEvent) {
-        final float pitchInHz = pitchDetectionResult.getPitch();
-        runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            pitchTextView.setText("" + pitchInHz);
-          }
-        });
-
-      }
-    }));*/
-
     new AndroidFFMPEGLocator(this);
-
-    /*
-    AudioDispatcher dispatcher = AudioDispatcherFactory.fromPipe(RawFileManager.demo.getAbsolutePath(), 44100, 4096, 0);
-    TarsosDSPAudioFormat format = dispatcher.getFormat();
-    dispatcher.addAudioProcessor(new NoiseGenerator(0.2));
-    dispatcher.addAudioProcessor(new RateTransposer(centToFactor(-800)));
-    dispatcher.addAudioProcessor(new AndroidAudioPlayer(format));
-    new Thread(dispatcher, "Audio Dispatcher").start();
-    */
   }
 
   public void startMicRecording(View v) {
     micRecorder = new MicRecorder(RawFileManager.originalAudioFile);
+    micRecorder.setVolumeListener(new MicRecorder.VolumeListener() {
+      @Override
+      public void onVolumeChanged(int volume) {
+        volumeTextView.setText(volume + ":" + micRecorder.getDurationInMilliseconds());
+      }
+    });
     boolean success = micRecorder.start();
     if (!success) {
       Toast.makeText(getBaseContext(), "Unable to start mic recording", Toast.LENGTH_LONG).show();
@@ -110,8 +91,8 @@ public class MainActivity extends AppCompatActivity {
   public void startMicRecordingPlaybackWithEffect(View v) {
     dispatcher = AudioDispatcherFactory.fromPipe(RawFileManager.originalAudioFile.getAbsolutePath(), 44100, 4096, 0);
     TarsosDSPAudioFormat format = dispatcher.getFormat();
-    dispatcher.addAudioProcessor(new DelayEffect(0.2, 0.5, 44100));
-    dispatcher.addAudioProcessor(new RateTransposer(centToFactor(800)));
+    dispatcher.addAudioProcessor(new DelayEffect(0.04, 0.6, 44100));
+    dispatcher.addAudioProcessor(new RateTransposer(centToFactor(-500)));
     dispatcher.addAudioProcessor(new AndroidAudioPlayer(format));
     new Thread(dispatcher, "Audio Dispatcher").start();
   }
@@ -135,8 +116,8 @@ public class MainActivity extends AppCompatActivity {
       e.printStackTrace();
       return;
     }
-    dispatcher.addAudioProcessor(new DelayEffect(0.2, 0.5, 44100));
-    dispatcher.addAudioProcessor(new RateTransposer(centToFactor(800)));
+    dispatcher.addAudioProcessor(new DelayEffect(0.04, 0.6, 44100));
+    dispatcher.addAudioProcessor(new RateTransposer(centToFactor(-500)));
     dispatcher.addAudioProcessor(writerProcessor);
     new Thread(dispatcher, "Audio Dispatcher").start();
   }
