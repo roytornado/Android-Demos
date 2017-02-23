@@ -1,7 +1,6 @@
 package com.redso.audioprocessing;
 
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
@@ -9,16 +8,19 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class VideoMakerManager {
+  public static final int EVENT_ENCODE_SUCCESS = 0;
+  public static final int EVENT_ENCODE_FAILED = 1;
+
   public static String TAG = "VideoMakerManager";
-  File inputAudioFile;
-  File inputVideoFile;
-  File outputFile;
-  Handler handler;
+  public static final boolean debugEnabled = true;
+
+  private File inputAudioFile;
+  private File inputVideoFile;
+  private File outputFile;
+  private Handler handler;
 
   public VideoMakerManager(File inputAudioFile, File inputVideoFile, File outputFile, Handler handler) {
     this.inputAudioFile = inputAudioFile;
@@ -39,145 +41,115 @@ public class VideoMakerManager {
   private void startInternal() {
     try {
       convert();
+      handler.sendEmptyMessage(EVENT_ENCODE_SUCCESS);
     } catch (Exception e) {
-      e.printStackTrace();
+      logError("Can't convert", e);
+      handler.sendEmptyMessage(EVENT_ENCODE_FAILED);
     }
+    handler = null;
   }
 
   private void convert() throws Exception {
-    log("start convert");
+    logDebug("start convert");
     MediaMuxer muxer = new MediaMuxer(outputFile.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
 
-    // Audio
-
-    FileInputStream audioInputStream = new FileInputStream(inputAudioFile);
+    // Audio Setup
     MediaExtractor audioExtractor = new MediaExtractor();
     audioExtractor.setDataSource(inputAudioFile.getAbsolutePath());
 
     MediaFormat targetAudioFormat = null;
-    int targetInputTrack = 0;
-    int numTracks = audioExtractor.getTrackCount();
-    for (int i = 0; i < numTracks; ++i) {
+    for (int i = 0; i < audioExtractor.getTrackCount(); ++i) {
       MediaFormat format = audioExtractor.getTrackFormat(i);
       String mime = format.getString(MediaFormat.KEY_MIME);
+      logDebug("audioExtractor track: " + mime);
       if (mime.contains("audio")) {
-        log("audioExtractor track: " + mime);
         targetAudioFormat = format;
-        targetInputTrack = i;
         audioExtractor.selectTrack(i);
       }
     }
 
-    if (targetAudioFormat == null) {
+    // Video Setup
+    MediaExtractor videoExtractor = new MediaExtractor();
+    videoExtractor.setDataSource(inputVideoFile.getAbsolutePath());
+
+    MediaFormat targetVideoFormat = null;
+    for (int i = 0; i < videoExtractor.getTrackCount(); ++i) {
+      MediaFormat format = videoExtractor.getTrackFormat(i);
+      String mime = format.getString(MediaFormat.KEY_MIME);
+      logDebug("videoExtractor track: " + mime);
+      if (mime.contains("video")) {
+        targetVideoFormat = format;
+        videoExtractor.selectTrack(i);
+      }
+    }
+
+
+    if (targetAudioFormat == null || targetVideoFormat == null) {
+      new Exception("Expect one audio track and one video track");
       return;
     }
 
-    MediaFormat audioCodecOutputFormat = MediaFormat.createAudioFormat("audio/mp4a-latm", 44100, 1);
-    audioCodecOutputFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-    audioCodecOutputFormat.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
-
-    MediaCodec audioCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
-    audioCodec.configure(audioCodecOutputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-
-    int targetOutputTrack = muxer.addTrack(audioCodecOutputFormat);
+    int targetAudioOutputTrack = muxer.addTrack(targetAudioFormat);
+    int targetVideoOutputTrack = muxer.addTrack(targetVideoFormat);
     muxer.start();
-    audioCodec.start();
 
-    encodeAudio(audioInputStream, audioCodec, muxer, targetOutputTrack);
 
-    /*
-    int frameCount = 0;
+    ByteBuffer inputBuffer = ByteBuffer.allocate(256 * 1024);
     MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
-    ByteBuffer[] audioCodecInputBuffers = audioCodec.getInputBuffers();
-    ByteBuffer[] audioCodecOutputBuffers = audioCodec.getOutputBuffers();
-
-
-    boolean hasMoreData = true;
-    while (hasMoreData) {
-      int currentAudioInputBufferId = audioCodec.dequeueInputBuffer(-1);
-      ByteBuffer currentAudioInputBuffer = audioCodecInputBuffers[currentAudioInputBufferId];
-      currentAudioInputBuffer.clear();
-      audioExtractor.advance();
-      log("readSampleData: " + currentAudioInputBufferId + ":" + currentAudioInputBuffer.limit());
-      int bytesRead = audioExtractor.readSampleData(ByteBuffer.allocate(32000), 100);
-      long presentationTimeUs = audioExtractor.getSampleTime();
-      audioCodec.queueInputBuffer(currentAudioInputBufferId, 0, bytesRead, presentationTimeUs, 0);
-
-      int currentAudioOutputBufferId = audioCodec.dequeueOutputBuffer(bufferInfo, -1);
-      if (currentAudioOutputBufferId >= 0) {
-        ByteBuffer encodedData = audioCodecOutputBuffers[currentAudioOutputBufferId];
-        muxer.writeSampleData(targetOutputTrack, encodedData, bufferInfo);
-        audioCodec.releaseOutputBuffer(currentAudioOutputBufferId, false);
-      } else if (currentAudioOutputBufferId == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-        log("audioCodec: INFO_OUTPUT_BUFFERS_CHANGED");
-        audioCodecOutputBuffers = audioCodec.getOutputBuffers();
-      } else if (currentAudioOutputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-        log("audioCodec: INFO_OUTPUT_FORMAT_CHANGED");
-      }
-
-      log("appended audio frame: " + frameCount);
-      frameCount++;
-      hasMoreData = audioExtractor.hasCacheReachedEndOfStream();
-    }*/
-
-    /*
-    while (audioExtractor.readSampleData(inputBuffer, offset) >= 0) {
-      bufferInfo.presentationTimeUs = audioExtractor.getSampleTime();
-      muxer.writeSampleData(targetOutputTrack, inputBuffer, bufferInfo);
-      log("appended audio frame: " + frameCount);
-      audioExtractor.advance();
-      frameCount++;
-    }*/
-
-    muxer.stop();
-    muxer.release();
-    log("finish convert");
-  }
-
-  private void encodeAudio(FileInputStream audioInputStream, MediaCodec audioCodec, MediaMuxer muxer, int targetOutputTrack) throws IOException {
-
     int frameCount = 0;
-    MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-    ByteBuffer[] audioCodecInputBuffers = audioCodec.getInputBuffers();
-    ByteBuffer[] audioCodecOutputBuffers = audioCodec.getOutputBuffers();
-
-    boolean hasMoreData = true;
-    while (hasMoreData) {
-      int currentAudioInputBufferId = audioCodec.dequeueInputBuffer(-1);
-      ByteBuffer currentAudioInputBuffer = audioCodecInputBuffers[currentAudioInputBufferId];
-      currentAudioInputBuffer.clear();
-      byte[] inputBuffer = new byte[currentAudioInputBuffer.limit()];
-      int bytesRead = audioInputStream.read(inputBuffer, 0, inputBuffer.length);
-      log("audioInputStream read: " + bytesRead);
-
-      if (bytesRead > 0) {
-        currentAudioInputBuffer.put(inputBuffer);
-        long presentationTimeUs = System.nanoTime();
-        audioCodec.queueInputBuffer(currentAudioInputBufferId, 0, bytesRead, presentationTimeUs, 0);
-
-        int currentAudioOutputBufferId = audioCodec.dequeueOutputBuffer(bufferInfo, -1);
-        if (currentAudioOutputBufferId >= 0) {
-          ByteBuffer encodedData = audioCodecOutputBuffers[currentAudioOutputBufferId];
-          muxer.writeSampleData(targetOutputTrack, encodedData, bufferInfo);
-          audioCodec.releaseOutputBuffer(currentAudioOutputBufferId, false);
-        } else if (currentAudioOutputBufferId == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-          log("audioCodec: INFO_OUTPUT_BUFFERS_CHANGED");
-          audioCodecOutputBuffers = audioCodec.getOutputBuffers();
-        } else if (currentAudioOutputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-          log("audioCodec: INFO_OUTPUT_FORMAT_CHANGED " + audioCodec.getOutputFormat());
-          targetOutputTrack = muxer.addTrack(audioCodec.getOutputFormat());
-        }
-        frameCount++;
-        log("appended audio frame: " + frameCount);
+    boolean audioMuxDone = false;
+    long presentationTimeUs = -1;
+    while (!audioMuxDone) {
+      inputBuffer.clear();
+      int bytesRead = audioExtractor.readSampleData(inputBuffer, 0);
+      if (bytesRead < 0) {
+        audioMuxDone = true;
       } else {
-        hasMoreData = false;
+        if (presentationTimeUs == -1) presentationTimeUs = audioExtractor.getSampleTime();
+        bufferInfo.presentationTimeUs = audioExtractor.getSampleTime() - presentationTimeUs;
+        bufferInfo.flags = audioExtractor.getSampleFlags();
+        bufferInfo.size = bytesRead;
+        muxer.writeSampleData(targetAudioOutputTrack, inputBuffer, bufferInfo);
+        logDebug("appended audio frame: " + targetAudioOutputTrack + ":" + frameCount + ":" + bufferInfo.presentationTimeUs);
+        audioExtractor.advance();
+        frameCount++;
       }
     }
+
+    frameCount = 0;
+    boolean videoMuxDone = false;
+    presentationTimeUs = -1;
+    while (!videoMuxDone) {
+      inputBuffer.clear();
+      int bytesRead = videoExtractor.readSampleData(inputBuffer, 0);
+      if (bytesRead < 0) {
+        videoMuxDone = true;
+      } else {
+        if (presentationTimeUs == -1) presentationTimeUs = videoExtractor.getSampleTime();
+        bufferInfo.presentationTimeUs = videoExtractor.getSampleTime() - presentationTimeUs;
+        bufferInfo.flags = videoExtractor.getSampleFlags();
+        bufferInfo.size = bytesRead;
+        muxer.writeSampleData(targetVideoOutputTrack, inputBuffer, bufferInfo);
+        logDebug("appended video frame: " + targetVideoOutputTrack + ":" + frameCount + ":" + bufferInfo.presentationTimeUs);
+        videoExtractor.advance();
+        frameCount++;
+      }
+    }
+
+    audioExtractor.release();
+    videoExtractor.release();
+    muxer.stop();
+    muxer.release();
+    logDebug("finish convert");
   }
 
 
-  private void log(String message) {
-    Log.d(TAG, message);
+  private void logDebug(String message) {
+    if (debugEnabled) Log.d(TAG, message);
+  }
+
+  private void logError(String message, Throwable throwable) {
+    Log.e(TAG, message, throwable);
   }
 }

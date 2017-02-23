@@ -31,7 +31,7 @@ public class RawFileManager {
     inputVideo = convertRawFile(context, R.raw.test_video, "test_video.mp4", dir);
     originalAudioFile = new File(context.getExternalCacheDir(), "originalAudio.m4a");
     processedAudioFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "processedAudio.wav");
-    outputVideoFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "outputVideo.m4a");
+    outputVideoFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "outputVideo.mp4");
     outputAudioFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "outputAudio.m4a");
   }
 

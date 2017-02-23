@@ -16,8 +16,8 @@ public class PCMEncoder {
   public static final int EVENT_ENCODE_SUCCESS = 0;
   public static final int EVENT_ENCODE_FAILED = 1;
 
-  private static final String TAG = "PCMEncoder";
-  private static final boolean debugEnabled = false;
+  public static final String TAG = "PCMEncoder";
+  public static final boolean debugEnabled = false;
   private static final String COMPRESSED_AUDIO_FILE_MIME_TYPE = "audio/mp4a-latm";
   private static final int CODEC_TIMEOUT = 5000;
 

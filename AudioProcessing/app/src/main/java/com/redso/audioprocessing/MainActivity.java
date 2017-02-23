@@ -1,6 +1,8 @@
 package com.redso.audioprocessing;
 
+import android.content.Intent;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -171,17 +173,26 @@ public class MainActivity extends AppCompatActivity {
   }
 
   public void mergeWithVideo(View v) {
-    //VideoMakerManager videoMakerManager = new VideoMakerManager(RawFileManager.processedAudioFile, RawFileManager.inputVideo, RawFileManager.outputVideoFile, videoMakerHandler);
-    //videoMakerManager.start();
+    VideoMakerManager videoMakerManager = new VideoMakerManager(RawFileManager.outputAudioFile, RawFileManager.inputVideo, RawFileManager.outputVideoFile, videoMakerHandler);
+    videoMakerManager.start();
   }
 
   public void playMerged(View v) {
+    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(RawFileManager.outputVideoFile.getAbsolutePath()));
+    intent.setDataAndType(Uri.parse(RawFileManager.outputVideoFile.getAbsolutePath()), "video/mp4");
+    startActivity(intent);
   }
 
   private Handler videoMakerHandler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
       super.handleMessage(msg);
+      if (msg.what == VideoMakerManager.EVENT_ENCODE_SUCCESS) {
+        Toast.makeText(getBaseContext(), "mergeWithVideo success " + RawFileManager.outputVideoFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+      }
+      if (msg.what == VideoMakerManager.EVENT_ENCODE_FAILED) {
+        Toast.makeText(getBaseContext(), "mergeWithVideo failed " + RawFileManager.outputVideoFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+      }
     }
   };
 
