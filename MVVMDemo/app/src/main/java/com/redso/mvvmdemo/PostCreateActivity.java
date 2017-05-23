@@ -1,5 +1,6 @@
 package com.redso.mvvmdemo;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.app.ActionBar;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.redso.mvvmdemo.base.BaseActivity;
+import com.redso.mvvmdemo.manager.ApiManager;
 
 public class PostCreateActivity extends BaseActivity {
 
@@ -59,5 +61,28 @@ public class PostCreateActivity extends BaseActivity {
   }
 
   public void submit(View view) {
+    postTitleTextInput.setError("");
+    postDescTextInput.setError("");
+    if (postTitleTextInput.getEditText().getText().length() == 0) {
+      postTitleTextInput.setError("Please input title");
+      return;
+    }
+    if (postDescTextInput.getEditText().getText().length() == 0) {
+      postDescTextInput.setError("Please input title");
+      return;
+    }
+    if (!agreeCheckBox.isChecked()) {
+      showAlertMessage("Please agree T&C");
+      return;
+    }
+    showLoading();
+    // It's just mocked-up call. Nothing real here
+    ApiManager.sInstance.createPost(new ApiManager.CreatePostCallback() {
+      @Override
+      public void onResponse() {
+        hideLoading();
+        navigateUpTo(new Intent(getBaseContext(), PostListActivity.class));
+      }
+    });
   }
 }
