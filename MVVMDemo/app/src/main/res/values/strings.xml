@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MVVMDemo</string>
+    <string name="title_post_detail">Post Detail</string>
+    <string name="title_post_create">Create Post</string>
+</resources>
