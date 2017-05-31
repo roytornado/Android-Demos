@@ -2,11 +2,14 @@ package com.redso.mvvmdemo.base;
 
 
 import android.app.ProgressDialog;
+import android.arch.lifecycle.LifecycleRegistry;
+import android.arch.lifecycle.LifecycleRegistryOwner;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 
-public class BaseActivity extends AppCompatActivity {
+public class BaseActivity extends AppCompatActivity implements LifecycleRegistryOwner {
+  LifecycleRegistry lifecycleRegistry = new LifecycleRegistry(this);
   ProgressDialog progressDialog;
 
   protected void showLoading() {
@@ -31,5 +34,10 @@ public class BaseActivity extends AppCompatActivity {
       }
     });
     builder.show();
+  }
+
+  @Override
+  public LifecycleRegistry getLifecycle() {
+    return lifecycleRegistry;
   }
 }

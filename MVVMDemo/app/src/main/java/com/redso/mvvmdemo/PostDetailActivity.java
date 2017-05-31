@@ -41,7 +41,7 @@ public class PostDetailActivity extends BaseActivity {
   public boolean onOptionsItemSelected(MenuItem item) {
     int id = item.getItemId();
     if (id == android.R.id.home) {
-      navigateUpTo(new Intent(this, PostListActivity.class));
+      onBackPressed();
       return true;
     }
     return super.onOptionsItemSelected(item);

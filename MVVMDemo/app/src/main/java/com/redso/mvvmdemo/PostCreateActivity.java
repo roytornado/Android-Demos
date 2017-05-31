@@ -8,6 +8,7 @@ import android.support.v7.widget.AppCompatCheckBox;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
@@ -60,6 +61,16 @@ public class PostCreateActivity extends BaseActivity {
     });
   }
 
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    int id = item.getItemId();
+    if (id == android.R.id.home) {
+      onBackPressed();
+      return true;
+    }
+    return super.onOptionsItemSelected(item);
+  }
+
   public void submit(View view) {
     postTitleTextInput.setError("");
     postDescTextInput.setError("");
@@ -81,7 +92,7 @@ public class PostCreateActivity extends BaseActivity {
       @Override
       public void onResponse() {
         hideLoading();
-        navigateUpTo(new Intent(getBaseContext(), PostListActivity.class));
+        onBackPressed();
       }
     });
   }
