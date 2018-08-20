@@ -34,7 +34,7 @@ class LocationForegroundService : Service() {
     val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
     if (ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
       Common.showNotification(App.context, "[LocationForeground] requestLocationUpdates")
-      locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0f, locationListener)
+      locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 0f, locationListener)
     }
     return super.onStartCommand(intent, flags, startId)
   }

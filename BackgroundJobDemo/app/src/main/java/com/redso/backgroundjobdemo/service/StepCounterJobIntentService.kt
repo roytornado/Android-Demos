@@ -24,7 +24,6 @@ class StepCounterJobIntentService : BaseJobIntentService() {
     var lastStepCountPref = "lastStepCountPref"
     var lastCallbackCountPref = "lastCallbackCountPref"
 
-    var registered = false
     var sensorListener = object : SensorEventListener {
       override fun onSensorChanged(sensorEvent: SensorEvent?) {
         sensorEvent?.values?.let {
@@ -52,6 +51,7 @@ class StepCounterJobIntentService : BaseJobIntentService() {
               var lastCallbackCount = sharedPreferences.getInt(lastCallbackCountPref, 0)
               lastCallbackCount += 1
               sharedPreferences.edit().putInt(lastCallbackCountPref, lastCallbackCount).apply()
+              Common.showNotification(App.context, "[StepCounter] lastCallbackCount: ${lastCallbackCount} @ ${now.toDate.formattedDateString}")
             }
           }
         }
@@ -73,10 +73,6 @@ class StepCounterJobIntentService : BaseJobIntentService() {
     super.onHandleWork(intent)
     val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-    if (!registered) {
-      //sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-      registered = true
-    }
     sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
   }
 }

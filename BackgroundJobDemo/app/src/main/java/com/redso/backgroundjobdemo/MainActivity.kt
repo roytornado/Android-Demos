@@ -53,8 +53,9 @@ class MainActivity : AppCompatActivity() {
   }
 
   fun testJobIntentService(v: View) {
+    testAction("testJobIntentService", 6)
     //testRepeatAction("testJobIntentService", 3, 10)
-    testJobScheduler(ComponentName(this, Wait5JobService::class.java))
+    //testJobScheduler(ComponentName(this, Wait5JobService::class.java))
   }
 
   fun testNetworkCallJobIntentService(v: View) {
@@ -80,8 +81,8 @@ class MainActivity : AppCompatActivity() {
       Log.i(Constants.TAG, "testJobScheduler $serviceComponent getMinPeriodMillis ${JobInfo.getMinPeriodMillis()}")
       finish()
       val builder = JobInfo.Builder(700, serviceComponent)
-      //builder.setMinimumLatency(2000)
-      builder.setPeriodic(JobInfo.getMinPeriodMillis())
+      builder.setMinimumLatency(3000)
+      //builder.setPeriodic(JobInfo.getMinPeriodMillis())
       (getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler).schedule(builder.build())
     }
   }
